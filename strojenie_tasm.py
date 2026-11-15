@@ -28,32 +28,29 @@ PAYTABLE = {
 }
 
 PAYLINES = (
-    (0, 0, 0, 0, 0), (1, 1, 1, 1, 1), (2, 2, 2, 2, 2),
-    (0, 1, 2, 1, 0), (2, 1, 0, 1, 2),
-    (0, 0, 1, 2, 2), (2, 2, 1, 0, 0),
-    (0, 1, 1, 1, 0), (2, 1, 1, 1, 2),
-    (1, 0, 0, 0, 1), (1, 2, 2, 2, 1),
-    (0, 1, 0, 1, 0), (2, 1, 2, 1, 2),
-    (1, 0, 1, 0, 1), (1, 2, 1, 2, 1),
-    (0, 2, 0, 2, 0), (2, 0, 2, 0, 2),
-    (0, 0, 2, 0, 0), (2, 2, 0, 2, 2),
-    (1, 0, 2, 0, 1),
+    (0, 0, 0, 0, 0),  # górny wiersz
+    (1, 1, 1, 1, 1),  # środkowy wiersz
+    (2, 2, 2, 2, 2),  # dolny wiersz
 )
 
-# Rdzenie obejmują dotychczasowe pozycje 1–10. Dalsze pozycje
-# dopisujemy ze wzorca A–H, zaczynając w innym miejscu na każdym bębnie.
+# Rdzenie utrwalają rozkład WILD i FS użyty do podziału RTP między bazę i bonus.
+# Dalsze pozycje bazy i bonusu dopisujemy z przesuniętego wzorca A–H.
+FILL_START = 10  # Indeks, od którego liczymy przesunięcie wzorca.
 BASE_CORES = (
-    "ABCDSHEFGA", "DGBAWEFCHB", "HEASWCBFDG", "FACDBHGWEA", "BCGHAEDFSB",
+    "DBCDSHDFGCABCDEABSD", "DGWAWWFCHBAWDCAWEDE", "HABSWCAFDGCDEABWDEW",
+    "FWCDBHGAEADEABCDWAB", "BCGHDEDFSBEABCDEASC",
 )
 BONUS_CORES = (
-    "ABCEDAFGHB", "DBGHWAEFCB", "FADCEBWHGA", "CWEABHDGFB", "GEHBDACFAB",
+    "ABCEDAFGHB", "DBGHWAEFWB", "FADCEBWHGA", "WWEABHDGFB", "GEHBDACFAB",
 )
 
 
 def build_tapes(cores, length, fill):
     tapes = []
     for reel, core in enumerate(cores):
-        extra = "".join(fill[(reel + pos) % len(fill)] for pos in range(length - len(core)))
+        extra = "".join(
+            fill[(reel + pos - FILL_START) % len(fill)] for pos in range(len(core), length)
+        )
         tapes.append(core + extra)
     return tuple(tapes)
 
@@ -123,7 +120,7 @@ def make_board_evaluator(line_win, units_per_stake):
 
     def board_value(reel_rows):
         # Po wybraniu stanu WILD każdy symbol linii pochodzi z innego bębna.
-        # Liniowość wartości oczekiwanej pozwala zsumować wszystkie 20 linii.
+        # Liniowość wartości oczekiwanej pozwala zsumować wszystkie wiersze.
         row_options = [[tuple(sorted(row.items())) for row in reel] for reel in reel_rows]
         stop_combinations = prod(sum(reel[0].values()) for reel in reel_rows)
         total = sum(

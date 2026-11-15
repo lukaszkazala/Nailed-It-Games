@@ -15,17 +15,12 @@ TARGET_RTP = Fraction(94, 100)
 FREE_SPIN_COUNT = 10
 FS_REELS = (0, 2, 4)
 
+# Pięć pozycji w krotce odpowiada bębnom od lewej do prawej.
+# Wartość na każdej pozycji to numer wiersza w board[bęben][wiersz].
 PAYLINES = (
-    (0, 0, 0, 0, 0), (1, 1, 1, 1, 1), (2, 2, 2, 2, 2),
-    (0, 1, 2, 1, 0), (2, 1, 0, 1, 2),
-    (0, 0, 1, 2, 2), (2, 2, 1, 0, 0),
-    (0, 1, 1, 1, 0), (2, 1, 1, 1, 2),
-    (1, 0, 0, 0, 1), (1, 2, 2, 2, 1),
-    (0, 1, 0, 1, 0), (2, 1, 2, 1, 2),
-    (1, 0, 1, 0, 1), (1, 2, 1, 2, 1),
-    (0, 2, 0, 2, 0), (2, 0, 2, 0, 2),
-    (0, 0, 2, 0, 0), (2, 2, 0, 2, 2),
-    (1, 0, 2, 0, 1),
+    (0, 0, 0, 0, 0),  # górny wiersz
+    (1, 1, 1, 1, 1),  # środkowy wiersz
+    (2, 2, 2, 2, 2),  # dolny wiersz
 )
 
 # Mnożniki całkowitej stawki za 3, 4 i 5 kolejnych dopasowań.
@@ -43,18 +38,18 @@ PAYTABLE = {
 # Każdy napis to 21 kolejnych pozycji jednej cyklicznej taśmy.
 # Taśmy są w kolejności bębnów 1–5. W = WILD, S = FS.
 BASE_TAPES = (
-    "ABCDSHEFGAABCDEABCDEA",
-    "DGBAWEFCHBBCDEABCDEAB",
-    "HEASWCBFDGCDEABCDEABC",
-    "FACDBHGWEADEABCDEABCD",
-    "BCGHAEDFSBEABCDEABCDE",
+    "DBCDSHDFGCABCDEABSDEA",
+    "DGWAWWFCHBAWDCAWEDEAB",
+    "HABSWCAFDGCDEABWDEWBC",
+    "FWCDBHGAEADEABCDWABCD",
+    "BCGHDEDFSBEABCDEASCDE",
 )
 
 BONUS_TAPES = (
     "ABCEDAFGHBABCDEABCDEA",
-    "DBGHWAEFCBBCDEABCDEAB",
+    "DBGHWAEFWBBCDEABCDEAB",
     "FADCEBWHGACDEABCDEABC",
-    "CWEABHDGFBDEABCDEABCD",
+    "WWEABHDGFBDEABCDEABCD",
     "GEHBDACFABEABCDEABCDE",
 )
 
@@ -86,7 +81,8 @@ def spin_board(reel_strips, rng):
 
 def evaluate_payline(line, paytable):
     """Zwraca (symbol, indeks początku, długość, mnożnik) lub None."""
-    # Na linii z 5 pól każda seria długości co najmniej 3 obejmuje środek.
+    # W wierszu jest sześć możliwych położeń serii długości 3–5.
+    # Wszystkie obejmują trzecie pole, więc od niego szukamy dopasowań.
     middle = line[2]
     if middle == FS:
         return None
@@ -123,11 +119,8 @@ def evaluate_payline(line, paytable):
 def evaluate_board(board, paylines, paytable):
     """Sumuje mnożniki ze wszystkich aktywnych linii."""
     total = 0.0
-    for r0, r1, r2, r3, r4 in paylines:
-        line = (
-            board[0][r0], board[1][r1], board[2][r2],
-            board[3][r3], board[4][r4],
-        )
+    for payline in paylines:
+        line = tuple(board[reel][row] for reel, row in enumerate(payline))
         win = evaluate_payline(line, paytable)
         if win is not None:
             total += win[3]
@@ -325,7 +318,7 @@ def simulate(number_of_rounds, seed):
 def print_results(number_of_rounds, seed, results):
     print(f"Płatne rundy = {number_of_rounds}, ziarno = {seed}, stawka = {STAKE:g}")
     print(f"Szacowane RTP gry bazowej = {results['base_rtp']:.4%}")
-    print(f"Szacowany wkład darmowych spinów do RTP = {results['bonus_rtp']:.4%}")
+    print(f"Szacowany wkład darmowych spinów do RTP = {100 * results['bonus_rtp']:.4f} p.p.")
     print(f"Szacowane całkowite RTP = {results['total_rtp']:.4%}")
     print(f"Uruchomienia bonusu = {results['bonus_count']}")
     print(f"Częstotliwość bonusu = {results['bonus_frequency']:.4%}")
@@ -353,7 +346,7 @@ def print_results(number_of_rounds, seed, results):
 def print_exact_results(results):
     print(f"Cel RTP = {float(TARGET_RTP):.4%}")
     print(f"Teoretyczne RTP gry bazowej = {float(results['base_rtp']):.6%}")
-    print(f"Teoretyczny wkład darmowych spinów = {float(results['bonus_rtp']):.6%}")
+    print(f"Teoretyczny wkład darmowych spinów do RTP = {100 * float(results['bonus_rtp']):.6f} p.p.")
     print(f"Teoretyczne całkowite RTP = {float(results['total_rtp']):.6%}")
     gap = 100 * (results["total_rtp"] - TARGET_RTP)
     print(f"Odchylenie od celu = {float(gap):+.7f} p.p.")
@@ -365,7 +358,7 @@ def print_exact_results(results):
 
 
 def run_checks():
-    assert len(PAYLINES) == len(set(PAYLINES)) == 20
+    assert PAYLINES == tuple((row,) * 5 for row in range(3))
     assert all(len(strip) == 21 for strip in BASE_STRIPS + BONUS_STRIPS)
     assert all(set(PAYTABLE) <= set(strip) for strip in BASE_STRIPS + BONUS_STRIPS)
     assert all(0 < pay3 < pay4 < pay5 for pay3, pay4, pay5 in PAYTABLE.values())
@@ -376,12 +369,32 @@ def run_checks():
     assert fs_reels == set(FS_REELS)
     assert all(FS not in strip for strip in BONUS_STRIPS)
 
+    # Sprawdzamy wszystkie położenia serii oraz warianty zastąpienia H
+    # przez WILD na bębnach 2–4. A na zewnątrz wyznacza granicę serii H.
+    for length in (3, 4, 5):
+        for start in range(6 - length):
+            span = range(start, start + length)
+            choices = [("H",) if reel in span else ("A",) for reel in range(5)]
+            for reel in (1, 2, 3):
+                if reel in span:
+                    choices[reel] = ("H", WILD)
+            expected = ("H", start, length, PAYTABLE["H"][length - 3])
+            for line in product(*choices):
+                assert evaluate_payline(line, PAYTABLE) == expected, (line, expected)
+
     a3, a4, _ = PAYTABLE["A"]
-    assert evaluate_payline(("B", "A", "A", "A", "C"), PAYTABLE) == ("A", 1, 3, a3)
+    horizontal_wins = tuple(zip("ABBBA", "AAAAB", "CDAFG"))
+    assert math.isclose(
+        evaluate_board(horizontal_wins, PAYLINES, PAYTABLE), PAYTABLE["B"][0] + a4,
+    )
+    bent_win = tuple(zip("ACDEA", "FBGBH", "CDBEF"))
+    assert evaluate_board(bent_win, PAYLINES, PAYTABLE) == 0
+
     assert evaluate_payline(("A", "A", FS, "A", "A"), PAYTABLE) is None
     assert evaluate_payline(("A", WILD, "A", "A", "C"), PAYTABLE) == ("A", 0, 4, a4)
 
     line = ("A", WILD, WILD, WILD, "B")
+    assert evaluate_payline(line, PAYTABLE) == ("H", 1, 3, PAYTABLE["H"][0])
     competition = {
         "A": (0.3, 0.6, 1.0),
         "B": (0.4, 0.9, 2.0),

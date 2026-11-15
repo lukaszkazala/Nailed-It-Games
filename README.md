@@ -52,20 +52,9 @@ Wydłużenie taśm z 10 do 21 pozycji zmniejszyło szansę na pojawienie się WI
 Wystarczy Python z biblioteką standardową.
 
 ```powershell
-python -X utf8 main.py --test-only
-python -X utf8 main.py --exact
-python -X utf8 main.py --rounds 1000000 --seed 2026
+python -X utf8 main2.py --test-only
+python -X utf8 main2.py --exact
+python -X utf8 main2.py --rounds 1000000 --seed 2026
 ```
 
-Pierwsze polecenie uruchamia testy reguł gry, drugie liczy wyniki teoretyczne, a trzecie odtwarza symulację. Stałe ziarno `2026` pozwala powtórzyć tę samą próbę. W `main.py` są też taśmy, linie i tabela wypłat. Do sprawdzania różnych konfiguracji taśm służy `strojenie_tasm.py`.
-
-## Sprawdzenie pliku modelu
-
-Skrypt `sprawdz_integralnosc.py` liczy skrót SHA-256 pliku `main.py`. Porównanie ze skrótem zapisanym dla sprawdzonej wersji pozwala wykryć zmianę pliku, w tym zmianę końców linii.
-
-```powershell
-python -X utf8 sprawdz_integralnosc.py main.py
-python -X utf8 sprawdz_integralnosc.py main.py --verify HASH_Z_RAPORTU
-```
-
-W drugim poleceniu wstaw 64-znakowy skrót referencyjny.
+Pierwsze polecenie uruchamia testy reguł gry, drugie liczy wyniki teoretyczne, a trzecie odtwarza symulację. Stałe ziarno `2026` pozwala powtórzyć tę samą próbę. W `main2.py` są też taśmy, linie i tabela wypłat. Do sprawdzania różnych konfiguracji taśm służy `strojenie_tasm.py`.

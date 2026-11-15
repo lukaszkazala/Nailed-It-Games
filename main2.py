@@ -195,8 +195,8 @@ def expected_board_win(reel_rows, reel_outcome_counts, payline_units):
     """Liczy wartość oczekiwaną sumy wypłat w jednostkach paytable."""
     weighted_payout = 0
     for line in PAYLINES:
-        # Bębny losują niezależnie. Mnożymy liczby sposobów uzyskania
-        # każdego symbolu na wybranej linii. Linie mogą współdzielić pola.
+        # Linie mogą współdzielić pola. W obrębie pojedynczej linii
+        # każdy symbol pochodzi jednak z innego, niezależnego bębna.
         distributions = [reel_rows[reel][row].items() for reel, row in enumerate(line)]
         for combination in product(*distributions):
             symbols, counts = zip(*combination)
@@ -207,7 +207,7 @@ def expected_board_win(reel_rows, reel_outcome_counts, payline_units):
 
 
 def exact_metrics(paytable=PAYTABLE):
-    # Ułamki zachowują dziesiętne wartości paytable przy obliczaniu RTP i remisów.
+    # Ułamki zachowują dokładne dziesiętne wartości wypłat.
     exact_paytable = {
         symbol: tuple(Fraction(str(payout)) for payout in payouts)
         for symbol, payouts in paytable.items()
@@ -237,13 +237,15 @@ def exact_metrics(paytable=PAYTABLE):
     for spin in range(1, FREE_SPIN_COUNT + 1):
         sticky_rows = []
         for length, (rows, wild_stops, _) in zip(bonus_lengths, bonus_frequencies):
-            # Rozpatrujemy wszystkie sekwencje stopów do spinu t. Zwykły
-            # symbol wymaga braku WILD w poprzednich t-1 spinach i teraz.
+            # Zwykły symbol może wypaść tylko wtedy, gdy wcześniej
+            # WILD nie zablokował bębna i nie pojawia się teraz.
             clean_history = (length - wild_stops) ** (spin - 1)
             reel_rows = []
             for row in rows:
                 counts = {symbol: count * clean_history for symbol, count in row.items()}
                 if wild_stops:
+                    # Każda historia z wcześniejszym WILD daje pełną
+                    # kolumnę WILD niezależnie od bieżącego stopu.
                     counts[WILD] += length ** spin - length * clean_history
                 reel_rows.append(counts)
             sticky_rows.append(reel_rows)
@@ -282,7 +284,6 @@ def simulate(number_of_rounds, seed):
         bonus_sum += free_spins_win
         bonus_count += int(bonus_triggered)
 
-        # Algorytm Welforda uwzględnia każdą rundę, również wypłatę 0.
         payout_in_stakes = (base_win + free_spins_win) / STAKE
         if payout_in_stakes == 0:
             payout_counts["no_payout"] += 1
@@ -294,6 +295,7 @@ def simulate(number_of_rounds, seed):
             payout_counts["above_stake"] += 1
         max_payout = max(max_payout, payout_in_stakes)
 
+        # Algorytm Welforda uwzględnia każdą rundę, również wypłatę 0.
         delta = payout_in_stakes - mean_payout
         mean_payout += delta / round_number
         squared_deviations += delta * (payout_in_stakes - mean_payout)
@@ -342,7 +344,7 @@ def print_results(number_of_rounds, seed, results):
 
     counts = results["payout_counts"]
     print(f"Rundy bez wypłaty = {counts['no_payout'] / number_of_rounds:.4%}")
-    print(f"Rundy z wypłatą poniżej stawki = {counts['below_stake'] / number_of_rounds:.4%}")
+    print(f"Rundy z dodatnią wypłatą poniżej stawki = {counts['below_stake'] / number_of_rounds:.4%}")
     print(f"Rundy ze zwrotem stawki = {counts['break_even'] / number_of_rounds:.4%}")
     print(f"Rundy z wypłatą powyżej stawki = {counts['above_stake'] / number_of_rounds:.4%}")
     print(f"Najwyższa wypłata w próbie = {results['max_payout']:.3f}× stawki")
@@ -387,7 +389,7 @@ def run_checks():
     }
     assert evaluate_payline(line, competition) == ("F", 1, 3, 1.1)
 
-    # Remisy kolejno według początku, długości i symbolu.
+    # Przy tej samej wypłacie decydują początek, długość i symbol.
     tied_symbols = {"B": (0.5, 2.0, 5.0), "A": (0.5, 2.0, 4.0)}
     tied_table = {**tied_symbols, "C": (2.0, 3.0, 6.0)}
     assert evaluate_payline(line, tied_table) == ("A", 0, 4, 2.0)
